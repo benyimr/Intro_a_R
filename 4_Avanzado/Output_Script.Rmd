@@ -1,0 +1,261 @@
+---
+title: "Codigo"
+author: "Benjamín Muñoz"
+date: "14/3/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+
+#############################################################################################################################################################################################
+#PASO 0: ENTORNO DE TRABAJO
+
+#Instalar paquetes (de ser necesario)
+#install.packages(c("car","lmtest","glmmML","panelView","plm","pglm","sjmisc","sjPlot","stargazer","tidyverse"))
+
+#Activar paquetes
+library(car)
+library(lmtest)
+library(glmmML)
+library(panelView)
+library(plm)
+library(pglm)
+library(sjmisc)
+library(sjPlot)
+library(stargazer)
+library(tidyverse)
+
+
+#############################################################################################################################################################################################
+#PASO 1: IMPORTACIÓN DE BASE DE DATOS
+
+load("ELSOC_Wide_2016_2018_Sample.RData")
+load("ELSOC_Long_2016_2018_Sample.RData")
+load("Varieties_of_Democracy.RData")
+
+#############################################################################################################################################################################################
+#PASO 3: EXPLORACIÓN DE ESTRUCTURA DE DATOS
+
+#Siempre es una buena idea comenzar explorando los datos. Para esto, usaremos el comando head, el cual extrae la cabecera (primeras filas) de la base de datos.
+#Visualizar la estructura Wide.
+head(elsoc_wide)
+
+#Una alternativa para una visualización más precisa es extraer un conjunto acotado de variables (C01 y C02 en sus tres mediciones).
+#Elaboraremos las instrucciones por medio de 'pipes' (%>%) los cuales permiten reestructurar el código de R.
+
+elsoc_wide %>% dplyr::arrange(idencuesta) %>% dplyr::select(idencuesta, c01_w01, c01_w02, c01_w03, c02_w01, c02_w02, c02_w03) %>% head(5)
+
+
+#Estructura Long
+head(elsoc_long)
+elsoc_long %>% dplyr::arrange(idencuesta, wave) %>% dplyr::select(idencuesta, wave, c01) %>% head(12)
+
+
+```
+
+```{r}
+#############################################################################################################################################################################################
+#PASO 4: ESTADÍSTICA DESCRIPTIVA
+
+#Revisamos la distribución univariada de las variables 
+frq(elsoc_long$m29)
+table(is.na(elsoc_long$m29))
+
+#Recodificación de Variables
+elsoc_long$m29_rec1 <- car::recode(elsoc_long$m29, "-999 = NA; -888 = NA")
+elsoc_long$m29_rec2 <- log(elsoc_long$m29_rec1+1)
+
+elsoc_wide$m29_w01_rec1 <- car::recode(elsoc_wide$m29_w01, "-999 = NA; -888 = NA")
+elsoc_wide$m29_w02_rec1 <- car::recode(elsoc_wide$m29_w02, "-999 = NA; -888 = NA")
+elsoc_wide$m29_w03_rec1 <- car::recode(elsoc_wide$m29_w03, "-999 = NA; -888 = NA")
+
+elsoc_wide$m29_w01_rec2 <- log(elsoc_wide$m29_w01_rec1+1)
+elsoc_wide$m29_w02_rec2 <- log(elsoc_wide$m29_w02_rec1+1)
+elsoc_wide$m29_w03_rec2 <- log(elsoc_wide$m29_w03_rec1+1)
+
+#Cálculo de promedios según ola
+elsoc_long %>% dplyr::group_by(wave) %>% dplyr::summarise(ingreso = mean(m29_rec2, na.rm = TRUE))
+
+
+#También es posible realizar el mismo cálculo por medio de la base de datos wide
+elsoc_wide %>% dplyr::summarise(ingreso_w01 = mean(m29_w01_rec2, na.rm = TRUE),
+                                ingreso_w02 = mean(m29_w02_rec2, na.rm = TRUE),
+                                ingreso_w03 = mean(m29_w03_rec2, na.rm = TRUE))
+
+
+#Cálculo de correlaciones entre olas
+cor(elsoc_wide$m29_w01_rec2, elsoc_wide$m29_w02_rec2, use = "complete.obs")
+cor(elsoc_wide$m29_w02_rec2, elsoc_wide$m29_w03_rec2, use = "complete.obs")
+cor(elsoc_wide$m29_w01_rec2, elsoc_wide$m29_w03_rec2, use = "complete.obs")
+
+#Análisis de trayectorias
+frq(elsoc_long$m38)
+elsoc_wide$religion_w01 <- car::recode(elsoc_wide$m38_w01, "c(-999,-888)=NA;c(2,3)=2;c(4,6)=3;5=4;c(7,8,9)=5")
+elsoc_wide$religion_w02 <- car::recode(elsoc_wide$m38_w02, "c(-999,-888)=NA;c(2,3)=2;c(4,6)=3;5=4;c(7,8,9)=5")
+elsoc_wide$religion_w03 <- car::recode(elsoc_wide$m38_w03, "c(-999,-888)=NA;c(2,3)=2;c(4,6)=3;5=4;c(7,8,9)=5")
+
+#Trayectorias
+elsoc_wide$religion_tray <- paste0(elsoc_wide$religion_w01,elsoc_wide$religion_w02,elsoc_wide$religion_w03)
+data.frame(table(elsoc_wide$religion_tray))
+frq(elsoc_wide$religion_tray)
+
+#Exploración Global de Base de Datos
+#view_df(vdem3)
+
+#Gráfico de Heterogeneidad según grupo
+ggplot(data = vdem3) + geom_boxplot(mapping = aes(x = quota, y = democracy, group = quota))     #Variable de Tratamiento
+ggplot(data = vdem3) + geom_boxplot(mapping = aes(x = country, y = democracy, group = country)) #Países
+ggplot(data = vdem3) + geom_boxplot(mapping = aes(x = year, y = democracy, group = year))        #Años
+
+#Hay más heterogeneidad entre países. El tiempo sigue una cierta trayectoria creciente/convergente.
+
+#Gráfico de Tendencias temporales: Democracia a lo largo del tiempo
+ggplot(data = vdem3) + geom_line(mapping = aes(x = year, y = democracy, group = country))
+
+#Cambio en democracia según implementación de ley de cuotas
+panelView(formula = democracy ~ quota, data = vdem3, index = c("country","year"), type = "raw")
+panelView(formula = democracy ~ quota, data = vdem3, index = c("country","year"), type = "missing")
+
+
+```
+
+
+```{r}
+#############################################################################################################################################################################################
+#MODELOS BÁSICOS DE PANEL
+
+elsoc_long$d01_01_rec <- car::recode(elsoc_long$d01_01,"-999 =NA;-888=NA")
+elsoc_long$d01_02_rec <- car::recode(elsoc_long$d01_02,"-999 =NA;-888=NA")
+elsoc_long$d01_03_rec <- car::recode(elsoc_long$d01_03,"-999 =NA;-888=NA")
+
+elsoc_long$movilidad <- elsoc_long$d01_02_rec - elsoc_long$d01_01_rec
+
+elsoc_long$c01_rec <- car::recode(elsoc_long$c01,"-999 =NA;-888=NA")
+
+
+#Modelos Pooled MCO
+m_pooled_01 <- lm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_long)
+
+#Submuestras
+m_pooled_w16 <- lm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_long, subset = wave == 1)
+m_pooled_w17 <- lm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_long, subset = wave == 2)
+m_pooled_w18 <- lm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_long, subset = wave == 3)
+
+#Modelo Pooled MCO interactivo
+m_pooled_02 <- lm(movilidad ~ m0_sexo + m0_edad + c01_rec*wave, data = elsoc_long)
+
+#Tabla de Resumen
+stargazer(list(m_pooled_01, m_pooled_w16, m_pooled_w17, m_pooled_w18, m_pooled_02), type = "text")
+
+
+#Datos de Panel
+elsoc_panel <- pdata.frame(elsoc_long, index = c("idencuesta","wave"))
+pdim(elsoc_panel)
+
+#Estimación de Modelo de Primeras Diferencias
+m_fd_01 <- plm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_panel,
+               effect = "individual",
+               model = "fd")
+summary(m_fd_01)
+
+#Estimación de Modelo de Efectos Fijos
+m_fe_01 <- plm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_panel,
+               effect = "individual",
+               model = "within")
+summary(m_fe_01)
+
+#Estimación de Modelo de Efectos Aleatorios
+m_re_01 <- plm(movilidad ~ m0_sexo + m0_edad + c01_rec, data = elsoc_panel,
+               effect = "individual",
+               model = "random")
+summary(m_re_01)
+
+
+#Comando Coeftest
+coeftest(m_fd_01)
+coeftest(m_fe_01)
+coeftest(m_re_01)
+
+#Extracción de Elementos
+fixef(m_fe_01)
+ranef(m_re_01)
+
+#Matrices de Errores Estándares Robustos
+coeftest(m_fe_01)
+
+#El problema más común con este tipo de modelos es la heterocedasticidad. 
+coeftest(m_re_01, vcovHC)
+
+
+#Comparación de Resultados
+stargazer(list(m_pooled_01, m_pooled_02, m_fd_01, m_fe_01, m_re_01), type = "text")
+
+
+##############################
+#Modelos TSCS
+
+#Modelos Pooled MCO
+vdem_panel <- pdata.frame(vdem3, index = c("country","year"))
+pdim(vdem_panel)
+
+
+r_pooled_01 <- plm(democracy ~ civil + corruption + quota, data = vdem_panel, model = "pooling")
+r_fd_01     <- plm(democracy ~ civil + corruption + quota, data = vdem_panel, 
+                   effect = "individual", model = "fd")
+r_fe_01     <- plm(democracy ~ civil + corruption + quota, data = vdem_panel, 
+                   effect = "individual", model = "within")
+r_re_01     <- plm(democracy ~ civil + corruption + quota, data = vdem_panel, 
+                   effect = "individual", model = "random")
+
+#La estimación con una serie temporal más extensa es idéntica, pero los problemas de los datos tienden a ser otros. Se necesita un análisis de diagnóstico mucho más profundo. 
+#Abajo se incluyen algunos tests clásicos.
+stargazer(list(r_pooled_01, r_fd_01, r_fe_01, r_re_01), type = "text")
+
+#Extracción de Efectos Fijos
+fixef(r_fe_01)
+
+#Extracción de Efectos Aleatorios
+ranef(r_re_01)
+
+#Test Estadísticos
+pFtest(r_fe_01, r_pooled_01) #Test contraste Efectosc Fijos versus MCO Pooled. Se rechaza H0 de ausencia de efectos individuales (sesgo al ignorar país)
+
+plmtest(r_pooled_01) #Hay efectos significativos de unidad y/o tiempo.
+plmtest(r_pooled_01, effect = "twoways", type ="kw") 
+
+
+phtest(r_fe_01, r_re_01) #Test de Hausman provee evidencia de correlación entre regresores y efectos. 
+
+pwtest(r_pooled_01) #Se rechaza H0 de efectos no observados: potencialmente correlación serial. 
+pbltest(r_re_01)    #Evidencia de Correlación serial
+
+
+##############################
+#Modelos Binarios
+
+frq(elsoc_long$c19_01)
+elsoc_long$c19_01_rec <- car::recode(elsoc_long$c19_01, "-999=NA;-888=NA;1=0;2=0;3=0;4=1;5=1")
+
+#Tenemos que eliminar valores perdidos (se pierden muchos por que c19_01 no fue incluido en 2017)
+elsoc_long %>% dplyr::filter(is.na(c19_01_rec)==FALSE & is.na(c01_rec)==FALSE & is.na(d01_01_rec)==FALSE) -> elsoc_long1
+elsoc_panel1 <- pdata.frame(elsoc_long1, index = c("idencuesta","wave"))
+
+
+
+#l_pooled_01 <- pglm(c19_01_rec ~ m0_sexo + m0_edad + c01_rec + d01_01_rec, data = elsoc_panel1, model = "pooling", family = binomial(link = "logit"))
+#summary(l_pooled_01)
+
+#l_re_01 <- pglm(c19_01_rec ~ m0_sexo + m0_edad + c01_rec + d01_01_rec, data = elsoc_panel1, effect = "individual", model = "random", family = binomial(link = "logit"))
+#summary(l_red_01)
+
+#l_fe_01 <- pglm(c19_01_rec ~ m0_sexo + m0_edad + c01_rec + d01_01_rec, data = elsoc_panel1, effect = "individual", model = "within", family = binomial(link = "logit"))
+#summary(l_fe_01)
+
+
+```
+

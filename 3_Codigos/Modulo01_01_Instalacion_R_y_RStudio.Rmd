@@ -1,0 +1,135 @@
+---
+title: "Instalación de R y RStudio"
+author: "Benjamín Muñoz"
+date: "25/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+En este documento revisaremos como instalar R y RStudio, incluyendo recomendaciones para su actualización.
+
+## R como software 
+
+R es un lenguaje de programación y software estadístico. Para su uso, la alternativa más simple es instalar una versión en sus computadores. Para esto, deben acceder al sitio web de **The R Project for Statistical Computing** y elegir Descarga y utilizar un Espejo correspondiente a Chile para instalar R. Pueden acceder al sitio desde este [link](https://cran.dcc.uchile.cl/).
+
+La versión de R depende del sistema operativo:
+
+1. Windows
+2. Mac Os X
+3. Linux
+
+En cada caso, deben iniciar la descarga del archivo para instalar R. Deben elegir un idioma -preferible que sea español- y luego proceder con los pasos de instalación (**No es recomendable modificar los parámetros predeterminados**).
+
+
+### Paquetes en R
+
+R como software se compone de una pequeña versión base, la cual se obtiene al instalarse. Ahora, la funcionalidad de R se puede expandir por medio de paquetes (*packages*). Los paquetes son elaborados por investigadores que ponen a disposición el código que desarrollan para ejecutar ciertos procedimientos.
+
+Los paquetes deben ser instalados una única vez, para lo cual se necesita tener acceso a internet o contar con una versión descargada de éste. La instalación se puede realizar desde la Barra de Herramientas de R o por medio del comando *install_packages("nombre_del_paquete_a_instalar")*. Posteriormente, únicamente se necesita activar el paquete por medio del comando *library( )* o del comando *require( )*. A continuación, un ejemplo:
+
+```{r,eval=FALSE}
+install.packages("car")   #La instalación sólo es necesaria una vez.
+
+library(car)              #La activación es necesaria en cada sesión que se usan funciones
+                          #incorporadas en el paquete
+```
+
+
+### Actualización de R
+
+Instalamos una versión específica de R. Sin embargo, constantemente se desarrollan nuevas versiones del software, incorporando mejoras, corrigiendo errores y adaptando algunas características. La versión de R aparece en la parte superior cuando abrimos R:
+
+<center>
+![Figura 1 App de R en OS X](img001mark.png)
+</center>
+
+
+Otro modo de acceder a la versión de R es por medio de la función R.version
+
+```{r}
+R.version
+```
+
+Es recomendable actualizar la versión de R. La manera más sencilla es volviendo a instalar R desde CRAN. Sin embargo, aquí revisaremos como hacerlo por medio de comandos.
+
+### Actualización de R en Windows
+
+Si el sistema operativo de nuestro computador es Windows, podemos usar el paquete [installr](https://www.r-statistics.com/2013/03/updating-r-from-r-on-windows-using-the-installr-package/) de Tal Galili:
+
+```{r,eval=FALSE}
+#Instalación y activación de installr
+
+install.packages("installr")   #Sólo es necesario si no está instalado
+library(installr)
+
+updateR()  #Esta función iniciará el proceso de instalación de R.
+           #Te guiará por el proceso de instalación con ventanas de opciones.
+           #Es posible adaptar los argumentos de la función. 
+           #Para esto revisen la ayuda de la función con ?updateR()
+```
+
+### Actualización de R en OS X
+
+El paquete *installr* sólo está disponible para Windows. En OS-X la alternativa más frecuente sigue siendo la instalación manual. Recientemente se ha desarrollado el paquete [updateR](https://andreacirilloblog.wordpress.com/2015/10/22/updater-package-update-r-version-with-a-function-on-mac-osx/),
+de Andrea Cirillo, el cual permite actualizar la versión de R por medio de comandos ejecutados en RStudio.
+
+El package está en desarrollo, por lo que necesitamos anteriormente el package *devtools* (herramientas para el desarrollo de funciones y paquetes en R.). Con dicho paquete activado podremos acceder al package *updateR*. 
+
+```{r,eval=FALSE}
+#Instalar y activar devtools
+install.packages("devtools")      #Solo es necesario si no está instalado
+library(devtools)
+
+#Instalar el paquete updateR
+install_github('andreacirilloac/updateR')   #Solo es necesario si no está instalado
+
+#Activar el paquete updateR
+library(updateR)
+
+updateR(admin_password = "password_administrador")  
+
+#La función en este paquete también se llama updateR.A diferencia del caso de Windows, 
+#aquí es necesario incluir como argumento la clave de administrador utilizada en OS-X
+```
+
+## RStudio como Entorno de desarrollo integrado (IDE)
+
+RStudio es una aplicación que facilita el uso de R por medio de un editor de código inteligente y funcionalidades específicas para acceder a información presente en el área de trabajo en R. Para descargarlo se hace desde el [sitio de RStudio](https://www.rstudio.com/products/rstudio/download/)
+
+La versión de RStudio depende del sistema operativo que utilicen:
+
+1. Windows
+2. Mac Os X
+3. Ubuntu/Fedora (basados en Linux)
+
+### Actualización de RStudio
+
+Actualizar RStudio es bastante sencillo. Simplemente en la Barra de Herramientas accedemos a ```Help```>```Check for Updates```
+
+<center>
+![Figura 2:Actualizar RStudio](img002mark.png)
+</center>
+
+
+## Actualización de Paquetes
+
+No sólo es necesario actualizar las versiones de R y RStudio, también es preferible hacerlo con los paquetes instalados. Esto puede hacerse con el comando *update.packages()*. Lo hará con todos los paquetes instalados, exceptuando los descargados y los obtenidos desde ```devtools::install_github()```. Por defecto, actualizará todos los paquetes: 
+
+```{r,eval=FALSE}
+update.packages(ask=FALSE)  #Con este argumento no será necesario aceptar la
+                            #instalación de los paquetes de cada uno de los paquetes.
+
+```
+
+Nick Hathaway provee este código que permite volver a installar los paquetes posterior a una actualización de R:
+
+```{r,eval=FALSE}
+#Obtener el listado de los paquetes instalados en R
+paquetes = as.data.frame(installed.packages(.libPaths()[1]), stringsAsFactors = F)
+
+#Instalar los paquetes nuevamente
+install.packages(paquetes$Package)
+```

@@ -1,0 +1,84 @@
+---
+title: "Clases y Estructuras de Datos"
+author: "Benjamín Muñoz"
+date: "08/01/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+En R todo es un objeto, por lo que es importante conocer la diversidad de tipos de objetos que existen. Ahora estudiaremos:
+
+* Clases atómicas de objetos.
+* Otras clases de objetos.
+* Estructuras de datos. 
+
+##Clases Atómicas de Objetos 
+
+Existen en R seis clases básicas de objetos. Estas clases primarias son también llamadas **atómicas**. Estas clases atómicas son:
+
+|**Atómica**|**Modo**	 |**Almacenamiento**|**Descripción**                         |    
+------------|----------|------------------|----------------------------------------|
+|logical	  |logical	 |logical           | Valores lógicos: TRUE, FALSE           |
+|integer	  |numeric	 |integer           | Número enteros (sin decimales)         |
+|double	    |numeric	 |double            | Números con decimales                  |
+|complex	  |complex	 |complex           | Números complejos                      |
+|character  |character |character         | Caracteres (cadenas de letras/símbolos)|
+|raw	      |raw	     |raw               | Valores brutos                         |
+
+Existen comandos útiles para chequear lo anterior. El más común es utilizar ```class()``` para identificar la clase de un objeto. Tal como se deduce de la tabla anterior, el modo de almacenamiento puede ser distinto.
+
+
+```{r,collapse=TRUE,error=TRUE}
+
+#Lógico
+a <- TRUE
+a
+class(a)
+
+#Numérico o Doble (incluye decimales)
+b <- 4.5
+b
+class(b)
+
+#Entero: se generan usando el sufijo L
+c <- 3
+c
+class(c)
+
+c <- 3L
+class(c)
+
+#Complejo: números complejos con el sufijo i
+d <- sqrt(-2) #Arroja un error, ya que la operación no está definida en los Reales
+
+d <- sqrt(-2i)
+d
+class(d)
+
+#Caracter o Cadena: conjunto de letras: se generan con comillas
+e <- "Hola"
+e
+class(e)
+
+f <- "45"
+f
+class(f)
+```
+
+Se puede distinguir entre la ```class()``` ,como propiedad de un objeto que determina como las funciones operan con él (no es una clasificación completa), del ```mode()```que corresponde a un sistema de clasificación de objetos según su estructura básica. Aún más, existe un modo específico para su almacenamiento al momento de crear objetos. 
+
+En la práctica, los objetos más utilizados son de 3 tipos:
+
+<center>
+![Vectores Atómicos](C:\\Users\\Benja\\Dropbox\\3_Docencia\\4_Taller_R_EVMM\\3 Códigos y Datos\\Modulo_01\\img006mark.png)
+</center>
+
+
+##Algunas clases especiales de objetos
+
+
+##Estructura de Datos
+

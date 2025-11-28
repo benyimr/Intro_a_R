@@ -1,0 +1,559 @@
+---
+title: "Introducción al Análisis de Datos de Panel"
+author: "Benjamín Muñoz"
+email: "ajmunoz@uc.cl"
+date: "2019/03/12"
+output:
+  xaringan::moon_reader:
+    toc: true
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+class: center, middle
+<style>
+
+.center2 {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+</style>
+<img src="plot.png" class="cover" height="570" width="900">
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+---
+# Tabla de Contenidos
+
+<style>
+body {
+text-align: justify}
+</style>
+
+1. Conceptos Básicos.
+2. Manejo de Datos de Panel.
+3. Visualización y Análisis Descriptivo.
+4. Modelos Básicos: Primeras Diferencias (FD).
+5. Modelos Avanzados: Efectos Fijos (FE) y Efectos Aleatorios (RE).
+6. Modelos de Panel para Datos Categóricos.
+
+
+---
+class: inverse, center, middle
+
+# ¡Comencemos con los conceptos Básicos!
+
+---
+
+# Análisis de Panel
+
+- Es una **estructura de datos** formada por unidades con varias mediciones en el tiempo.<sup>1</sup>
+
+- La dependencia temporal tiene ventajas y desventajas. Probablemente el principal beneficio es el **control de (parte de) la heterogeneidad no observada**. Se controlan
+las características desconocidas (sesgo por variable omitida) que son constantes en el tiempo. Las unidades son su propio control.
+
+- Permite estudiar el **cambio individual** y de evolución tendencial. Para estudiar niveles y tendencias agregadas no se necesitan datos de panel (para esto bastan cortes transversales combinados).
+
+
+.footnote[[1] Unidades con varias mediciones en el tiempo. Es decir, hay una estructura multinivel con mediciones como nivel 1 y unidades como nivel 2.]
+
+
+---
+
+# Dependencia de Información
+
+- El seguimiento longitudinal implica que no se puede asumir independencia respecto al tiempo. Esto lo diferencia de una **combinación independiente de cortes transversales**.
+
+- Las mediciones no son independientes entre sí.  Al tener una muestra de 750 personas entrevistadas en 3 ocasiones no equivale 
+(en términos de poder estadístico) a tener 2250 entrevistados medidos en una medición (o provenientes de tres muestreos independientes de 750 casos cada uno.)
+
+- Esto lleva a subestimar (en ocasiones específicas sobreestimar) los errores estándares, alterando la inferencia estadística.
+
+.center2[
+```{r echo = FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("hierarchical.png")
+```
+]   
+
+
+---
+
+# Beneficios del Análisis de Panel
+
+- Combinar mayor información (mayor poder estadístico).
+- Interés por cambio temporal, especialmente a nivel de unidades.
+- Control de heterogeneidad no observada. 
+- Mejor medición de fenómenos
+- Es un buen diseño para el análisis causal, incluso con datos observacionales.
+
+---
+
+# Desafíos del Análisis de Panel
+
+- **Atrición**: abandono de unidades del estudio (no respuesta de unidad). Es particularmente rave si es permanente. Es una potencial fuente de sesgo.
+- Evolución de estructura poblacional o quiebre temporal.
+- Representatividad de muestras.
+- Efectos de Panel (**Panel Conditioning**): el hecho de repetir una medición hecha en t=0 puede afectar medición en t=1.
+
+---
+
+# Clasificación de Datos de Panel
+
+1. Según dimensiones: la relación entre el número de unidades y el número de mediciones.
+    - **Time-Series-Cross-Sectional** (TSCS): T grande, N pequeño-moderado.
+    - **Panel**: T pequeño, N grande.
+    
+2. Según estructura: número de mediciones entre las unidades.
+    - **Balanceado**: el número de mediciones es idéntico para todas las unidades.
+    - **Desbalanceado**: el número de mediciones por unidad es variable (atrición permanente, no respuesta de unidad temporal, ingreso posterior).
+
+De manera genérica, la lógica inferencial es igual para todas las combinaciones. Sin embargo, la estimación no lo es. Existen distintos estimadores para los distintos tipos de datos.
+
+---
+
+# Clasificación de Datos de Panel
+
+- Los datos **TSCS** poseen mucha información sobre la dimensión temporal. 
+
+- En cambio, los datos de **panel** tienen ventajas en la dimensión de corte transversal, facilitando el control de la heterogeneidad de unidades. 
+
+---
+class: inverse, center, middle
+
+# Manejo de Datos de Panel
+
+---
+
+# Estructura Básica de Datos de Panel
+
+Los datos de panel son **tridimensionales**:
+
+- Contiene **n** unidades i = 1, 2, ..., n.
+- Contiene **V** variables v = 1, 2, ... , V.
+- Contiene **T** mediciones t = 1, 2, ... , T.
+
+.center2[
+```{r echo = FALSE, out.width = "400px", fig.align='center'}
+knitr::include_graphics("estructura_datos.png")
+```
+]   
+
+
+**El desafío es transformar dicha estructura en un formato bidimensional**
+
+
+---
+
+# Formato Wide y Long
+
+- En formato **Wide** cada observacion es una fila (hay n filas). Las columnas representan variables-mediciones (T*V columnas).
+
+- En formato **Long** cada medición es una fila ( hay n*T filas). Las columnas representan variables (V columnas).
+
+- Para incorporar el tiempo, en el formato *wide* se usan los nombres de las variables, mientras en *long* se incorpora una variable indicadora. Esto se hace porque se necesitan (a lo menos) dos variables para identificar las unidades.
+
+- El formato *long* es más eficiente (no respuesta temporal reduce tamaño base de datos). El formato *wide* facilita análisis correlacional (cada medición es una variable) y refleja verdaderas dimensiones de los datos (n unidades observadas independientes entre sí).
+
+
+---
+
+# Manipulación de Datos 1
+
+
+.center2[
+```{r echo = FALSE, out.width = "600px", fig.align='center'}
+knitr::include_graphics("appendmerge.png")
+```
+]   
+
+---
+
+# Manipulación de Datos 2
+
+
+.center2[
+```{r echo = FALSE, out.width = "600px", fig.align='center'}
+knitr::include_graphics("widelong.png")
+```
+]   
+
+---
+
+# Ejercicio Nº 1 en R
+
+1. Comenzaremos formateando el entorno de trabajo. En sus computadores deben crear una carpeta que contenga los materiales del curso. Luego, desde RStudio crearemos un proyecto: `File -> New Project -> Existing Directory -> Browse`.
+
+2. Abrimos el archivo `Script_Taller_Panel_R_2019` y ejecutamos las primeras líneas:
+
+```{r, message=FALSE, warning=FALSE}
+
+#Instalar paquetes (de ser necesario)
+#install.packages(c("panelView","plm","tidyverse"))
+
+#Activar paquetes
+library(panelView)
+library(plm)
+library(sjmisc)
+library(tidyverse)
+
+#Importar bases de datos
+load("ELSOC_Wide_2016_2018_Sample.RData")
+load("ELSOC_Long_2016_2018_Sample.RData")
+
+```
+
+---
+
+# Ejercicio Nº 1 en R
+
+```{r}
+#Formato Wide
+elsoc_wide %>% dplyr::select(idencuesta, c01_w01, c01_w02, c01_w03) %>% head(5)
+
+#Formato Long
+elsoc_long %>% dplyr::select(idencuesta, wave, c01) %>% head(12)
+
+
+```
+
+
+---
+class: inverse, center, middle
+
+# Estadística Descriptiva
+
+---
+
+# Análisis Exploratorio de Datos
+
+- Es importante distinguir entre variables continuas y categóricas. Se utilizarán distintas estrategias de modelamiento con variables dependientes continuas y discretas. 
+
+- Se debe explorar la dimensión temporal de las variables. Esto implica identificar si las variables son  **estables** o **variables** en el tiempo. De manera más global, se necesita determinar cuánta variabilidad hay entre unidades y dentro de las unidades.
+
+El comando pipe `%>%` permite reestructurar las instrucciones en R:
+
+```{r, eval = FALSE}
+#Estructura Clásica
+verbo(sujeto, complemento)
+
+#Estructura con Pipe
+sujeto %>% verbo(complemento)
+
+base_de_datos %>% funcion(argumentos)
+```
+
+
+---
+
+# Análisis Correlacional
+
+- Énfasis en examinar la **correlación serial** en las variables. Para esto, debemos examinar la correlación entre tiempo t y t-1 y también entre t y t=1.
+
+- En base a esto se puede examinar el grado de dependencia temporal en cada una de las variables estudiadas.
+
+.center2[
+```{r echo = FALSE, out.width = "600px", fig.align='center'}
+knitr::include_graphics("correlacion01.png")
+```
+]   
+
+```{r, echo = FALSE}
+#Recodificación de Variables
+elsoc_long$m29_rec1 <- car::recode(elsoc_long$m29, "-999 = NA; -888 = NA")
+elsoc_long$m29_rec2 <- log(elsoc_long$m29_rec1+1)
+
+elsoc_wide$m29_w01_rec1 <- car::recode(elsoc_wide$m29_w01, "-999 = NA; -888 = NA")
+elsoc_wide$m29_w02_rec1 <- car::recode(elsoc_wide$m29_w02, "-999 = NA; -888 = NA")
+elsoc_wide$m29_w03_rec1 <- car::recode(elsoc_wide$m29_w03, "-999 = NA; -888 = NA")
+
+elsoc_wide$m29_w01_rec2 <- log(elsoc_wide$m29_w01_rec1+1)
+elsoc_wide$m29_w02_rec2 <- log(elsoc_wide$m29_w02_rec1+1)
+elsoc_wide$m29_w03_rec2 <- log(elsoc_wide$m29_w03_rec1+1)
+```
+
+---
+
+# Análisis Correlacional
+
+```{r}
+#Evolución de Promedios de Ingreso
+elsoc_long %>% dplyr::group_by(wave) %>% 
+  summarise(ingreso = mean(m29_rec2, na.rm = TRUE))
+
+#Correlación de Mediciones en el Tiempo
+cor(elsoc_wide$m29_w01_rec2, elsoc_wide$m29_w02_rec2, use = "complete.obs")
+cor(elsoc_wide$m29_w02_rec2, elsoc_wide$m29_w03_rec2, use = "complete.obs")
+cor(elsoc_wide$m29_w01_rec2, elsoc_wide$m29_w03_rec2, use = "complete.obs")
+
+```
+
+---
+
+# Análisis de Variables Categóricas
+
+- Aquí se calculan valores un poco más complejos en base a matrices de transición. Se evalúa la probabilidad $Pr(Y~it~ = q)$ de pertenecer a categoría q en tiempo t, lo que se conoce como **probabilidad de estado**. Una vez el examen es entre t y t+1 como entre t y t=1.
+
+.center2[
+```{r echo = FALSE, out.width = "600px", fig.align='center'}
+knitr::include_graphics("correlacion02.png")
+```
+]   
+
+
+---
+
+# Trayectorias
+
+- Se busca examinar la pertenencia/presencia de un fenómeno o atributo a lo largo del tiempo. Se clasifican a los individuos según sus trayectorias de estabilidad o cambio en dichos atributos. 
+
+- A nivel agregado también son interesantes las tasas de permanencia, salida y reingreso. Muchas veces se usan técnicas básicas de **event-history analysis**.
+
+```{r, tidy=TRUE}
+#Análisis de trayectorias
+elsoc_wide$religion_w01 <- car::recode(elsoc_wide$m38_w01, "c(-999,-888)=NA;c(1,2,3,4,5,6)=1;c(7,8,9)=0")
+elsoc_wide$religion_w02 <- car::recode(elsoc_wide$m38_w02, "c(-999,-888)=NA;c(1,2,3,4,5,6)=1;c(7,8,9)=0")
+elsoc_wide$religion_w03 <- car::recode(elsoc_wide$m38_w03, "c(-999,-888)=NA;c(1,2,3,4,5,6)=1;c(7,8,9)=0")
+
+elsoc_wide$religion_tray <- paste0(elsoc_wide$religion_w01,elsoc_wide$religion_w02,elsoc_wide$religion_w03)
+
+table(elsoc_wide$religion_tray)
+```
+
+---
+
+# Evolución Temporal
+
+En términos longitudinales, es necesario teorizar sobre la estructura de cambios temporales de las variables. Mientras mayor sea el horizonte temporal, más importante es necesario modelar la dimensión longitudinal.
+
+Siempre es pertinente teorizar sobre cómo conceptualizar y cómo operacionalizar la dimensión temporal.
+
+.center2[
+```{r echo = FALSE, out.width = "650px", fig.align='center'}
+knitr::include_graphics("longitudinal01.png")
+```
+]   
+
+---
+
+# Evolución Temporal
+
+Esto también es importante de teorizar cuando se evalúan procesos causales.
+
+.center2[
+```{r echo = FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("longitudinal02.png")
+```
+]   
+
+---
+
+# Fuentes de Correlación Serial en Y
+
+Hay **variables constantes en el tiempo** (Z, toma distintos valores entre unidades, $within-variance = 0$) y **time-varying variables** (X, toman distintos valores entre unidades y en el tiempo).
+
+Las fuentes de dependencia temporal son:
+- Variables Z que hacen mantener a Y valores similares a lo largo del tiempo.
+- Variables X que presenten dependencia temporal y afectan a Y.
+- Valor de Y en tiempo t afecta su valor en t+1
+
+.center2[
+```{r echo = FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("longitudinal03.png")
+```
+]   
+
+---
+class: inverse, center, middle
+
+# Modelos Básicos de Panel
+
+---
+
+# Introducción: Modelos Lineales Básicos
+
+Se pueden elaborar modelos para estudiar **cambios** ( $\Delta$ Y) y **niveles** (Y). 
+
+Se asume una variable dependiente continua Y, la cual es medida para los n individuos en t ocasiones. 
+
+El modelo general de panel tiene la siguiente estructura:
+
+.center2[
+```{r echo = FALSE, out.width = "700px", fig.align='center'}
+knitr::include_graphics("ecuacion01.png")
+```
+]   
+
+El valor esperado de Y es descrito por un promedio global ( $\beta_{0}$ ) el cual puede cambiar en el tiempo y un conjunto de **time-varying variables** (X) y **time-constant variables** (Z).
+
+$\mu_{i}$ corresponde a las características desconocidas de las unidades que son constantes en el tiempo (**heterogeneidad no observada**).
+
+$e_{it}$ corresponde al error de medición y a las características desconocidas de las unidades que varían en el tiempo (**error idiosincrático**).
+
+
+---
+
+# Modelos Lineales de Cambio
+
+Respecto al término de error se asume:
+
+- **Varianza constante** ( $\sigma_{\mu}^{2}$ , $\sigma_{e}^{2}$ )
+
+- **Independencia entre errores** (corr( $\mu_{i},e_{it}$ )=0)
+
+- **Ausencia de correlación serial** (cor( $e_{it},e_{is}$ )=0)
+
+- **Exogeneidad estricta**: para cada medición, el valor esperado del error idiosincrático condicionado por la heterogeneidad no observada y las ovariantes X es cero ( $E(e_{it}|X,\mu_{i})=0$ ).
+
+
+---
+
+# Modelos Lineales de Cambio
+
+Se pueden establecer una relación directa entre los modelos de niveles y los modelos de cambios. 
+
+Nótese lo que ocurre con la heterogeneidad no observada y las variables constantes en el tiempo. Al diferenciar estos son eliminados
+
+.center2[
+```{r echo = FALSE, out.width = "700px", fig.align='center'}
+knitr::include_graphics("ecuacion02.png")
+```
+]   
+
+---
+
+# Primeras Diferencias
+
+Estimación con MCO con datos diferenciados. Se reduce el número de observaciones al diferenciar (pérdida de grados de libertad). Las unidades son sus propios controles. Se puede diferenciar más allá de un período
+
+Es necesario que las variables independientes sean variables en el tiempo y no exista colinealidad perfecta entre ellas. 
+
+Bajo una serie de supuestos se puede demostrar que FD es insesgado (exogeneidad estricta) y eficiente (homocedasticidad de errores diferenciados, ausencia de correlación serial).
+
+---
+
+# Primeras Diferencias
+
+Es un modelamiento simple e intuitivo. Pero no necesariamente cuenta con la variación suficiente para encontrar efectos de las covariantes X. No es susceptible a correlación serial.
+
+El supuesto de exogeneidad estricta no necesariamente se cumple. Aumentar el número de períodos no minimiza inconsistencia asociada a su incumplimiento. 
+
+Un ejemplo común de problemas de exogeneidad estricta es si existen correlaciones de valores futuros de regresores y término de error (feedback entre $Y_{it}$ y $X_{is}$ ).
+
+Otro problema es que, en el contexto de error de medición, puede dar resultados problemáticos (sesgo).
+
+---
+class: inverse, center, middle
+
+# Modelos Avanzados de Panel
+
+---
+
+# Efectos Fijos
+
+Estimación MCO tras transformación de datos (**time-demeaned**) lo cual elimina $\mu_{i}$. Es equivalente al *LSDV estimator* (incluir dummys de unidades). No obstante no se reduce el tamaño muestral, si hay pérdida de grados de libertad por transformación.
+
+.center2[
+```{r echo = FALSE, out.width = "700px", fig.align='center'}
+knitr::include_graphics("ecuacion03.png")
+```
+]   
+
+Únicamente utiliza la varianza *within* (transformación intragrupal), congelando toda la variación existente entre las unidades. Producto de lo anterior se eliminan variables constantes en el tiempo (Z). Se pueden incluir interacciones con time-varying variables. 
+
+---
+
+# Efectos Fijos
+
+Es una especificación bastante robusta y ampliamente utilizada en econometría. Al igual que en el caso anterior se asume que las variables $X_{itj}$ son **estrictamente exógenas** si condicionamos por el efecto no observado $\mu_{i}$ .
+
+Otros supuestos son homocedasticidad, ausencia de correlación serial y no multicolinealidad perfecta.
+
+Con T=2 FE y FD son equivalentes, proveyendo resultados idénticos. Con T>2 se diferencian y la decisión depende de su eficiencia relativa.
+
+- Ineficiente si hay poca variación dentro de unidades.
+- Riesgo de correlación serial (a diferencia de FD).
+- También asume exogeneidad estricta.
+- Conveniente si N es pequeño (respecto a RE).
+
+Un panel desbalanceado, mientras la ausencia de datos no se correlaciones con los errores idiosincráticos no implica mayores desafíos. Si atrición se correlaciona con error idiosincrático puede surgir sesgo. 
+
+Es posible especificar efectos fijos por unidad, tiempo y ambos (two-way fixed effects).
+
+---
+
+# Introducción a RE
+
+.center2[
+```{r echo = FALSE, out.width = "1000px", fig.align='center'}
+knitr::include_graphics("random.png")
+```
+]   
+
+---
+
+# Efectos Aleatorios
+
+Dentro de la literatura multinivel, corresponde al modelo de interceptos aleatorios, dónde se permite que cada unidad tenga un intercepto diferenciado.
+
+.center2[
+```{r echo = FALSE, out.width = "500px", fig.align='center'}
+knitr::include_graphics("ecuacion04.png")
+```
+]   
+
+El error $\mu_{i}$ es independiente de las variables $A_{i}$ y $X_{it}$ . Se utilizan datos cuasi-deducidos (quasi-demeanded data). A diferencia de FE que resta el promedio por período, RE resta una fracción de los promedios a lo largo del tiempo. Esto permite la inclusión de variables constantes en el tiempo. 
+
+La estimación no es por MCO. En cambio se usa *Generalized Least Squares* (GLS).
+
+El supuesto fundamental es Cov( $X_{it}$ , $\mu_{i}$ ) = 0. Se asume que la heterogeneidad no observada no se correlaciona con ninguna variable explicativa. 
+
+
+---
+
+# Efectos Aleatorios
+
+.center2[
+```{r echo = FALSE, out.width = "600px", fig.align='center'}
+knitr::include_graphics("ecuacion05.png")
+```
+]   
+
+Se estima $$\lambda = 1 - \sqrt{\frac{\sigma_{e}^{2}}{\sigma_{e}^{2} + T \sigma_{\mu}^{2}}}$$
+
+Se han propuesto distintos estimadores de $\lambda$. Esta constante se utiliza para transformar los datos (cuasi-deducción), lo cual permite estimar por medio de MCO de los datos transformados.
+
+.center2[
+```{r echo = FALSE, out.width = "600px", fig.align='center'}
+knitr::include_graphics("ecuacion06.png")
+```
+]   
+
+$\lambda$ se mueve entre 0 y 1. Si $\lambda=1$ RE equivale a FE, si $\lambda=0$ equivale a pooled MCO.
+
+
+---
+
+# Literatura Recomendada
+
+Sobre R:
+
+- [R for Data Science](https://r4ds.had.co.nz/)
+- Political Analysis using R
+- R in Action
+
+Sobre Análisis de Panel:
+
+- The SAGE Handbook of Regression Analysis and Causal Inference
+- Applied Panel Data Analysis for Economic and Social Surveys
+- Panel Data Econometrics with R
+- [Panel Data Econometrics in R: The plm package](https://www.jstatsoft.org/article/view/v027i02/v27i02.pdf)
